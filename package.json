@@ -1,13 +1,13 @@
 {
   "name": "react-native-live-kit",
   "title": "React Native Live Kit",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "Open Source RTMP streaming SDK for react native",
   "main": "index.js",
   "files": [
     "README.md",
     "android",
-    "index.js",
+    "*.js",
     "ios",
     "react-native-live-kit.podspec"
   ],
