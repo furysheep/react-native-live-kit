@@ -10,7 +10,7 @@ import {
 const { width, height } = Dimensions.get('window');
 const RCTStream = requireNativeComponent('RCTStream', Stream);
 
-export default class Stream extends Component {
+class Stream extends Component {
   constructor(props, context) {
     super(props, context);
     this._onReady = this._onReady.bind(this);
@@ -19,20 +19,6 @@ export default class Stream extends Component {
     this._onError = this._onError.bind(this);
     this._onStop = this._onStop.bind(this);
   }
-
-  static propTypes = {
-    started: PropTypes.bool,
-    cameraFronted: PropTypes.bool,
-    url: PropTypes.string.isRequired,
-    landscape: PropTypes.bool.isRequired,
-
-    onReady: PropTypes.func,
-    onPending: PropTypes.func,
-    onStart: PropTypes.func,
-    onError: PropTypes.func,
-    onStop: PropTypes.func,
-    ...View.propTypes,
-  };
 
   static defaultProps = {
     cameraFronted: true,
@@ -75,3 +61,28 @@ export default class Stream extends Component {
     return <RCTStream {...nativeProps} />;
   }
 }
+
+Stream.propTypes = {
+  started: PropTypes.bool,
+  cameraFronted: PropTypes.bool,
+  url: PropTypes.string.isRequired,
+  landscape: PropTypes.bool.isRequired,
+  audio: PropTypes.shape({
+    bitrate: PropTypes.number.isRequired,
+    samplerate: PropTypes.number.isRequired,
+  }),
+  video: PropTypes.shape({
+    bitrate: PropTypes.number.isRequired,
+    fps: PropTypes.number.isRequired,
+    width: PropTypes.number.isRequired,
+    height: PropTypes.number.isRequired,
+  }),
+  onReady: PropTypes.func,
+  onPending: PropTypes.func,
+  onStart: PropTypes.func,
+  onError: PropTypes.func,
+  onStop: PropTypes.func,
+  ...View.propTypes,
+};
+
+export default Stream;

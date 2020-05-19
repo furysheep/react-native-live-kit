@@ -33,6 +33,8 @@
     bool _started;
     bool _cameraFronted;
     NSString *_url;
+    NSDictionary *_audioParams;
+    NSDictionary *_videoParams;
 }
 
 - (void)insertReactSubview:(UIView *)view atIndex:(NSInteger)atIndex
@@ -103,102 +105,129 @@
 #pragma mark -- Getter Setter
 - (LFLiveSession *)session {
     if (!_session) {
-        NSLog(@"Session create");
-        
-        LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration defaultConfigurationForQuality:LFLiveVideoQuality_Medium3 outputImageOrientation:[[UIApplication sharedApplication] statusBarOrientation]];
-        videoConfiguration.autorotate = YES;
-        
-        /***   默认分辨率368 ＊ 640  音频：44.1 iphone6以上48  双声道  方向竖屏 ***/
-        _session = [[LFLiveSession alloc] initWithAudioConfiguration:[LFLiveAudioConfiguration defaultConfiguration] videoConfiguration:videoConfiguration];
-        [_session setRunning:YES];
-        
-        /**    自己定制单声道  */
-        /*
-         LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
-         audioConfiguration.numberOfChannels = 1;
-         audioConfiguration.audioBitrate = LFLiveAudioBitRate_64Kbps;
-         audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
-         _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:[LFLiveVideoConfiguration defaultConfiguration]];
-         */
-        
-        /**    自己定制高质量音频96K */
-        /*
-         LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
-         audioConfiguration.numberOfChannels = 2;
-         audioConfiguration.audioBitrate = LFLiveAudioBitRate_96Kbps;
-         audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
-         _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:[LFLiveVideoConfiguration defaultConfiguration]];
-         */
-        
-        /**    自己定制高质量音频96K 分辨率设置为540*960 方向竖屏 */
-        
-        /*
-         LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
-         audioConfiguration.numberOfChannels = 2;
-         audioConfiguration.audioBitrate = LFLiveAudioBitRate_96Kbps;
-         audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
-         
-         LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
-         videoConfiguration.videoSize = CGSizeMake(540, 960);
-         videoConfiguration.videoBitRate = 800*1024;
-         videoConfiguration.videoMaxBitRate = 1000*1024;
-         videoConfiguration.videoMinBitRate = 500*1024;
-         videoConfiguration.videoFrameRate = 24;
-         videoConfiguration.videoMaxKeyframeInterval = 48;
-         videoConfiguration.orientation = UIInterfaceOrientationPortrait;
-         videoConfiguration.sessionPreset = LFCaptureSessionPreset540x960;
-         
-         _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
-         */
-        
-        
-        /**    自己定制高质量音频128K 分辨率设置为720*1280 方向竖屏 */
-        
-        /*
-         LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
-         audioConfiguration.numberOfChannels = 2;
-         audioConfiguration.audioBitrate = LFLiveAudioBitRate_128Kbps;
-         audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
-         
-         LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
-         videoConfiguration.videoSize = CGSizeMake(720, 1280);
-         videoConfiguration.videoBitRate = 800*1024;
-         videoConfiguration.videoMaxBitRate = 1000*1024;
-         videoConfiguration.videoMinBitRate = 500*1024;
-         videoConfiguration.videoFrameRate = 15;
-         videoConfiguration.videoMaxKeyframeInterval = 30;
-         videoConfiguration.landscape = NO;
-         videoConfiguration.sessionPreset = LFCaptureSessionPreset360x640;
-         
-         _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
-         */
-        
-        
-        /**    自己定制高质量音频128K 分辨率设置为720*1280 方向横屏  */
-        
-        /*
-         LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
-         audioConfiguration.numberOfChannels = 2;
-         audioConfiguration.audioBitrate = LFLiveAudioBitRate_128Kbps;
-         audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
-         
-         LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
-         videoConfiguration.videoSize = CGSizeMake(1280, 720);
-         videoConfiguration.videoBitRate = 800*1024;
-         videoConfiguration.videoMaxBitRate = 1000*1024;
-         videoConfiguration.videoMinBitRate = 500*1024;
-         videoConfiguration.videoFrameRate = 15;
-         videoConfiguration.videoMaxKeyframeInterval = 30;
-         videoConfiguration.landscape = YES;
-         videoConfiguration.sessionPreset = LFCaptureSessionPreset720x1280;
-         
-         _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
-         */
-        
-        _session.delegate = self;
-        _session.showDebugInfo = YES;
-        _session.preView = self;
-        //_session.mirror = NO;
+        @synchronized(self) {
+            NSLog(@"Session create");
+            
+            LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration defaultConfigurationForQuality:LFLiveVideoQuality_High2 outputImageOrientation:[[UIApplication sharedApplication] statusBarOrientation]];
+            videoConfiguration.autorotate = YES;
+            
+            if (_videoParams) {
+                if (_videoParams[@"bitrate"]) {
+                    videoConfiguration.videoBitRate = [_videoParams[@"bitrate"] integerValue];
+                }
+                if (_videoParams[@"fps"]) {
+                    videoConfiguration.videoFrameRate = [_videoParams[@"fps"] integerValue];
+                }
+                if (_videoParams[@"width"] && _videoParams[@"height"]) {
+                    videoConfiguration.videoSize = CGSizeMake([_videoParams[@"width"] floatValue], [_videoParams[@"height"] floatValue]);
+                }
+            }
+            
+            LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration defaultConfiguration];
+            if (_audioParams) {
+                if (_audioParams[@"bitrate"])
+                    audioConfiguration.audioBitrate = (LFLiveAudioBitRate)_audioParams[@"bitrate"];
+                if (_audioParams[@"samplerate"])
+                    audioConfiguration.audioSampleRate = (LFLiveAudioSampleRate)_audioParams[@"samplerate"];
+            }
+
+            _session = [[LFLiveSession alloc] initWithAudioConfiguration:[LFLiveAudioConfiguration defaultConfiguration] videoConfiguration:videoConfiguration];
+            [_session setRunning:YES];
+            
+            if (_cameraFronted){
+                self.session.captureDevicePosition = AVCaptureDevicePositionFront;
+            }else {
+                self.session.captureDevicePosition = AVCaptureDevicePositionBack;
+            }
+            
+            /**    自己定制单声道  */
+            /*
+             LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
+             audioConfiguration.numberOfChannels = 1;
+             audioConfiguration.audioBitrate = LFLiveAudioBitRate_64Kbps;
+             audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
+             _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:[LFLiveVideoConfiguration defaultConfiguration]];
+             */
+            
+            /**    自己定制高质量音频96K */
+            /*
+             LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
+             audioConfiguration.numberOfChannels = 2;
+             audioConfiguration.audioBitrate = LFLiveAudioBitRate_96Kbps;
+             audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
+             _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:[LFLiveVideoConfiguration defaultConfiguration]];
+             */
+            
+            /**    自己定制高质量音频96K 分辨率设置为540*960 方向竖屏 */
+            
+            /*
+             LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
+             audioConfiguration.numberOfChannels = 2;
+             audioConfiguration.audioBitrate = LFLiveAudioBitRate_96Kbps;
+             audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
+             
+             LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
+             videoConfiguration.videoSize = CGSizeMake(540, 960);
+             videoConfiguration.videoBitRate = 800*1024;
+             videoConfiguration.videoMaxBitRate = 1000*1024;
+             videoConfiguration.videoMinBitRate = 500*1024;
+             videoConfiguration.videoFrameRate = 24;
+             videoConfiguration.videoMaxKeyframeInterval = 48;
+             videoConfiguration.orientation = UIInterfaceOrientationPortrait;
+             videoConfiguration.sessionPreset = LFCaptureSessionPreset540x960;
+             
+             _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
+             */
+            
+            
+            /**    自己定制高质量音频128K 分辨率设置为720*1280 方向竖屏 */
+            
+            /*
+             LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
+             audioConfiguration.numberOfChannels = 2;
+             audioConfiguration.audioBitrate = LFLiveAudioBitRate_128Kbps;
+             audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
+             
+             LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
+             videoConfiguration.videoSize = CGSizeMake(720, 1280);
+             videoConfiguration.videoBitRate = 800*1024;
+             videoConfiguration.videoMaxBitRate = 1000*1024;
+             videoConfiguration.videoMinBitRate = 500*1024;
+             videoConfiguration.videoFrameRate = 15;
+             videoConfiguration.videoMaxKeyframeInterval = 30;
+             videoConfiguration.landscape = NO;
+             videoConfiguration.sessionPreset = LFCaptureSessionPreset360x640;
+             
+             _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
+             */
+            
+            
+            /**    自己定制高质量音频128K 分辨率设置为720*1280 方向横屏  */
+            
+            /*
+             LFLiveAudioConfiguration *audioConfiguration = [LFLiveAudioConfiguration new];
+             audioConfiguration.numberOfChannels = 2;
+             audioConfiguration.audioBitrate = LFLiveAudioBitRate_128Kbps;
+             audioConfiguration.audioSampleRate = LFLiveAudioSampleRate_44100Hz;
+             
+             LFLiveVideoConfiguration *videoConfiguration = [LFLiveVideoConfiguration new];
+             videoConfiguration.videoSize = CGSizeMake(1280, 720);
+             videoConfiguration.videoBitRate = 800*1024;
+             videoConfiguration.videoMaxBitRate = 1000*1024;
+             videoConfiguration.videoMinBitRate = 500*1024;
+             videoConfiguration.videoFrameRate = 15;
+             videoConfiguration.videoMaxKeyframeInterval = 30;
+             videoConfiguration.landscape = YES;
+             videoConfiguration.sessionPreset = LFCaptureSessionPreset720x1280;
+             
+             _session = [[LFLiveSession alloc] initWithAudioConfiguration:audioConfiguration videoConfiguration:videoConfiguration];
+             */
+            
+            _session.delegate = self;
+            _session.showDebugInfo = YES;
+            _session.preView = self;
+            //_session.mirror = NO;
+        }
     }
     return _session;
 }
@@ -213,6 +242,13 @@
     return _containerView;
 }
 
+- (void)reloadSession {
+    if (_session && _session.running) {
+        [_session setRunning:NO];
+        _session = nil;
+        [self session];
+    }
+}
 
 - (void) setStarted:(BOOL) started{
     if(started != _started){
@@ -224,6 +260,20 @@
             [self.session stopLive];
         }
         _started = started;
+    }
+}
+
+- (void)setAudio:(NSDictionary *)config {
+    if (![_audioParams isEqualToDictionary:config]) {
+        _audioParams = config;
+        [self reloadSession];
+    }
+}
+
+- (void)setVideo:(NSDictionary *)config {
+    if (![_videoParams isEqualToDictionary:config]) {
+        _videoParams = config;
+        [self reloadSession];
     }
 }
 
